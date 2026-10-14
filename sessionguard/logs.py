@@ -29,9 +29,21 @@ def setup_logging(directory=None) -> Path:
     root.setLevel(logging.INFO)
     root.addHandler(handler)
 
+    log = logging.getLogger("sessionguard")
+    previous_hook, previous_thread_hook = sys.excepthook, threading.excepthook
+
     def excepthook(exc_type, exc, tb):
-        logging.getLogger("sessionguard").critical("Uncaught exception", exc_info=(exc_type, exc, tb))
+        log.critical("Uncaught exception", exc_info=(exc_type, exc, tb))
+        previous_hook(exc_type, exc, tb)  # keep the traceback on stderr too
+
+    def thread_excepthook(args):
+        log.critical(
+            "Uncaught exception in thread %s",
+            args.thread.name if args.thread else "?",
+            exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+        )
+        previous_thread_hook(args)
 
     sys.excepthook = excepthook
-    threading.excepthook = lambda a: excepthook(a.exc_type, a.exc_value, a.exc_traceback)
+    threading.excepthook = thread_excepthook
     return path

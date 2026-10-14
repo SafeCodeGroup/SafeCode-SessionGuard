@@ -100,7 +100,7 @@ Requires **Python 3.12**.
 ### Cross-platform builds
 
 PyInstaller **cannot cross-compile**: a macOS build has to be made on macOS, a Windows build on
-Windows and a Linux build on Linux. You have two options:
+Windows and a Linux build on Linux. There are three ways to build:
 
 1. **CI (recommended).** Every push to `main` runs lint, tests, a build and a launch smoke test on
    all three OSes in GitHub Actions, plus the Docker Linux build. The binaries are attached to

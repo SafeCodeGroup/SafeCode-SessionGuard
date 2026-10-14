@@ -52,3 +52,20 @@ def test_setup_logging_writes_file_and_captures_crashes(tmp_path):
 def test_permissions_are_noops_off_macos():
     assert permissions.input_allowed("Linux") is True
     assert permissions.request_input_permission("Windows") is None
+
+
+def test_crash_hook_still_prints_traceback(tmp_path, capsys):
+    root = logging.getLogger()
+    before = list(root.handlers), sys.excepthook, threading.excepthook
+    try:
+        setup_logging(tmp_path)
+        try:
+            raise ValueError("visible")
+        except ValueError:
+            sys.excepthook(*sys.exc_info())
+        assert "ValueError: visible" in capsys.readouterr().err
+    finally:
+        for h in root.handlers[len(before[0]) :]:
+            h.close()
+        root.handlers[:] = before[0]
+        sys.excepthook, threading.excepthook = before[1], before[2]

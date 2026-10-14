@@ -83,6 +83,13 @@ jobs:
             $VPY scripts/smoke_test.py "${{ matrix.exe }}"
           fi
 
+      - name: Show app log
+        if: failure()
+        run: |
+          cat ~/Library/Logs/SafeCodeSessionGuard/*.log \
+              ~/.config/SafeCodeSessionGuard/logs/*.log \
+              "${APPDATA:-/nonexistent}"/SafeCodeSessionGuard/logs/*.log 2>/dev/null || true
+
       - uses: actions/upload-artifact@v7
         with:
           name: SafeCodeSessionGuard-${{ matrix.name }}
