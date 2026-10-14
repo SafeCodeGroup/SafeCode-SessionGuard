@@ -22,8 +22,9 @@ def test_second_instance_is_refused_until_first_releases(tmp_path):
 
 def test_log_dir_per_platform():
     home = Path("/home/u")
-    assert log_dir("Darwin", home) == home / "Library/Logs/SafeCodeSessionGuard"
-    assert log_dir("Linux", home) == home / ".config/SafeCodeSessionGuard/logs"
+    assert log_dir("Darwin", home, {}) == home / "Library/Logs/SafeCodeSessionGuard"
+    assert log_dir("Linux", home, {}) == home / ".config/SafeCodeSessionGuard/logs"
+    assert log_dir("Linux", home, {"XDG_CONFIG_HOME": "/x"}) == Path("/x/SafeCodeSessionGuard/logs")
 
 
 def test_setup_logging_writes_file_and_captures_crashes(tmp_path):

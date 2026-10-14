@@ -11,11 +11,11 @@ from . import APP_ID
 from .settings import config_dir
 
 
-def log_dir(system=None, home=None) -> Path:
+def log_dir(system=None, home=None, env=None) -> Path:
     system = system or platform.system()
     if system == "Darwin":
         return (Path(home) if home else Path.home()) / "Library" / "Logs" / APP_ID
-    return config_dir(system, None, home) / "logs"
+    return config_dir(system, env, home) / "logs"
 
 
 def setup_logging(directory=None) -> Path:
