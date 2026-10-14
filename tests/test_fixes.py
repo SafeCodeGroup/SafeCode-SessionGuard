@@ -15,10 +15,14 @@ from tests.fakes import FakeComponent
 
 
 def test_gobject_idle_add_shim(monkeypatch):
+    # Override present (Python function): alias it directly.
     class Module:  # stands in for gi.repository.GObject without idle_add
         pass
 
-    glib, gobject = types.SimpleNamespace(idle_add=lambda *a: "queued"), Module()
+    def override(*a):
+        return "queued"
+
+    glib, gobject = types.SimpleNamespace(idle_add=override), Module()
     repo = types.SimpleNamespace(GLib=glib, GObject=gobject)
     monkeypatch.setitem(sys.modules, "gi", types.SimpleNamespace(repository=repo))
     monkeypatch.setitem(sys.modules, "gi.repository", repo)
@@ -107,3 +111,38 @@ def test_post_refresh_without_window_falls_back(tmp_path):
         settings_path=tmp_path / "s.json", inhibitor=FakeComponent(), keepalive=FakeComponent()
     )
     assert app._post_refresh() is False
+
+
+def test_gobject_shim_wraps_raw_priority_first_function(monkeypatch):
+    calls = []
+
+    class RawFunction:  # introspected functions are not Python functions
+        def __call__(self, *args):
+            calls.append(args)
+            return 7
+
+    class Module:
+        pass
+
+    glib = types.SimpleNamespace(idle_add=RawFunction(), PRIORITY_DEFAULT_IDLE=200)
+    gobject = Module()
+    repo = types.SimpleNamespace(GLib=glib, GObject=gobject)
+    monkeypatch.setitem(sys.modules, "gi", types.SimpleNamespace(repository=repo))
+    monkeypatch.setitem(sys.modules, "gi.repository", repo)
+    compat.ensure_gobject_idle_add()
+    cb = object()
+    assert gobject.idle_add(cb, "a", "b") == 7
+    assert calls == [(200, cb, "a", "b")]
+
+
+def test_self_test_flag_writes_report(tmp_path, monkeypatch):
+    from sessionguard import app as appmod
+    from sessionguard import selftest
+
+    report = tmp_path / "r.txt"
+    monkeypatch.setattr(selftest, "run_checks", lambda: [])
+    assert appmod.main(["--self-test", str(report)]) == 0
+    assert report.read_text().splitlines()[1] == "OK"
+    monkeypatch.setattr(selftest, "run_checks", lambda: ["tray: boom"])
+    assert appmod.main(["--self-test", str(report)]) == 1
+    assert "FAILED" in report.read_text() and "tray: boom" in report.read_text()

@@ -4,6 +4,7 @@ import logging
 import os
 import platform
 import subprocess
+import sys
 import threading
 import webbrowser
 
@@ -251,7 +252,13 @@ class SessionGuardApp:
             self.guard.disarm()
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["--self-test"]:
+        from .selftest import write_report
+
+        # Windowed builds have no console, so the report goes to a file.
+        return write_report(argv[1] if len(argv) > 1 else "selftest.txt")
     log_path = setup_logging()
     instance = SingleInstance(config_dir() / "instance.lock")
     if not instance.acquire():

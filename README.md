@@ -229,14 +229,20 @@ on macOS or Linux.
 Native Linux builds need these system packages first (Debian/Ubuntu):
 
 ```bash
-sudo apt-get install libgirepository-2.0-dev libcairo2-dev pkg-config gir1.2-ayatanaappindicator3-0.1
+sudo apt-get install libgirepository-2.0-dev libcairo2-dev pkg-config \
+    gir1.2-ayatanaappindicator3-0.1 gir1.2-girepository-3.0
 ```
 
 The architecture follows the machine you build on. The macOS app is `arm64` on Apple Silicon;
 build on an Intel Mac for `x86_64`.
 
-To check a build actually launches:
-`python scripts/smoke_test.py <path-to-executable>`.
+To check a build:
+- `<executable> --self-test report.txt` loads every runtime dependency (tray backend, input
+  backends, OS APIs) inside the built binary. It exits with 0 and writes `OK` when everything
+  is there.
+- `python scripts/smoke_test.py <executable>` checks the app stays running.
+
+On Linux, run both under a display (`xvfb-run` on headless machines).
 
 ### Develop
 

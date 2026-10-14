@@ -5,6 +5,12 @@ T=$(mktemp -d)
 tar -xzf dist/SafeCodeSessionGuard-*-linux-x86_64.tar.gz -C "$T"
 "$T/SafeCodeSessionGuard/install.sh"
 if ! xvfb-run -a dbus-launch --exit-with-session \
+    "$HOME/.local/bin/safecode-sessionguard" --self-test "$T/selftest.txt"; then
+  cat "$T/selftest.txt"
+  exit 1
+fi
+cat "$T/selftest.txt"
+if ! xvfb-run -a dbus-launch --exit-with-session \
     python3 scripts/smoke_test.py "$HOME/.local/bin/safecode-sessionguard"; then
   cat ~/.config/SafeCodeSessionGuard/logs/*.log 2>/dev/null || true
   exit 1
