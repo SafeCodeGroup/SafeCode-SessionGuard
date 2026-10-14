@@ -146,3 +146,42 @@ def test_self_test_flag_writes_report(tmp_path, monkeypatch):
     monkeypatch.setattr(selftest, "run_checks", lambda: ["tray: boom"])
     assert appmod.main(["--self-test", str(report)]) == 1
     assert "FAILED" in report.read_text() and "tray: boom" in report.read_text()
+
+
+def test_session_bus_detection(tmp_path):
+    from sessionguard.app import linux_session_bus_available
+
+    assert linux_session_bus_available({"DBUS_SESSION_BUS_ADDRESS": "unix:path=/x"})
+    assert not linux_session_bus_available({"XDG_RUNTIME_DIR": str(tmp_path)})
+    (tmp_path / "bus").touch()
+    assert linux_session_bus_available({"XDG_RUNTIME_DIR": str(tmp_path)})
+    assert not linux_session_bus_available({})
+
+
+def test_fatal_startup_error_exits_instead_of_hanging(tmp_path, monkeypatch):
+    from sessionguard import app as appmod
+
+    class Boom:
+        def run(self):
+            raise RuntimeError("tray failed")
+
+    exits = []
+
+    def fake_exit(code):
+        exits.append(code)
+        raise SystemExit(code)
+
+    monkeypatch.setenv("SESSIONGUARD_LOG_DIR", str(tmp_path))
+    monkeypatch.setattr(appmod, "config_dir", lambda: tmp_path)
+    monkeypatch.setattr(appmod, "setup_logging", lambda: tmp_path / "log")
+    monkeypatch.setattr(appmod, "SessionGuardApp", Boom)
+    monkeypatch.setattr(appmod.os, "_exit", fake_exit)
+    with pytest.raises(SystemExit):
+        appmod.main([])
+    assert exits == [1]
+
+
+def test_log_dir_env_override(tmp_path):
+    from sessionguard.logs import log_dir
+
+    assert log_dir("Linux", env={"SESSIONGUARD_LOG_DIR": str(tmp_path)}) == tmp_path

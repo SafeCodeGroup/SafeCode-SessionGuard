@@ -2,6 +2,7 @@
 
 import logging
 import logging.handlers
+import os
 import platform
 import sys
 import threading
@@ -12,6 +13,9 @@ from .settings import config_dir
 
 
 def log_dir(system=None, home=None, env=None) -> Path:
+    env = os.environ if env is None else env
+    if env.get("SESSIONGUARD_LOG_DIR"):  # used by the launch test
+        return Path(env["SESSIONGUARD_LOG_DIR"])
     system = system or platform.system()
     if system == "Darwin":
         return (Path(home) if home else Path.home()) / "Library" / "Logs" / APP_ID

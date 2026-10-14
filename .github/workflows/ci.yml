@@ -103,7 +103,7 @@ jobs:
           run fedora:latest "dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth dbus-x11 python3 \
             procps-ng libayatana-appindicator-gtk3 tar gzip"
           run archlinux:latest "pacman -Syu --noconfirm xorg-server-xvfb xorg-xauth dbus python \
-            procps-ng libayatana-appindicator tar gzip"
+            procps-ng libayatana-appindicator tar gzip && dbus-uuidgen --ensure"
 
       - name: "Linux: run from source on Ubuntu 22.04 (system Python)"
         if: runner.os == 'Linux'

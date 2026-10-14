@@ -6,7 +6,9 @@ import platform
 import subprocess
 import sys
 import threading
+import traceback
 import webbrowser
+from pathlib import Path
 
 from . import APP_ID, APP_NAME, HOMEPAGE, __version__
 from .autostart import Autostart
@@ -42,6 +44,15 @@ def duration_label(minutes: int) -> str:
 
 
 WM_APP_REFRESH = 0x8000 + 1  # WM_APP + 1
+
+
+def linux_session_bus_available(env=None) -> bool:
+    """The Linux tray and notifications talk to the desktop's D-Bus session."""
+    env = os.environ if env is None else env
+    if env.get("DBUS_SESSION_BUS_ADDRESS"):
+        return True
+    runtime = env.get("XDG_RUNTIME_DIR")
+    return bool(runtime) and Path(runtime, "bus").exists()
 
 
 def open_path(path) -> None:
@@ -231,6 +242,11 @@ class SessionGuardApp:
                 self._refresh_from_worker()
 
     def run(self):
+        if SYSTEM == "Linux" and not linux_session_bus_available():
+            raise RuntimeError(
+                "No desktop D-Bus session found. Start SafeCode SessionGuard from a "
+                "graphical desktop session (GNOME, KDE, XFCE, ...)."
+            )
         ensure_gobject_idle_add()
         import pystray
 
@@ -267,7 +283,14 @@ def main(argv=None) -> int:
     log.info("%s %s starting on %s (log: %s)", APP_NAME, __version__, platform.platform(), log_path)
     try:
         SessionGuardApp().run()
-    finally:
-        log.info("Exited")
+    except Exception as exc:
+        log.critical("Fatal error: %s", exc, exc_info=True)
+        traceback.print_exc()
+        logging.shutdown()
         instance.release()
+        # pystray's setup thread is not a daemon and blocks forever if the tray
+        # failed to start, which would leave a dead process behind.
+        os._exit(1)
+    log.info("Exited")
+    instance.release()
     return 0
