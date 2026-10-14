@@ -12,10 +12,12 @@ cd "$(dirname "$0")/.."
 
 # Without the GIRepository typelib PyInstaller silently leaves out GTK and
 # AppIndicator support, and the app crashes at startup. Fail the build instead.
-if ! find dist/SafeCodeSessionGuard -name 'AyatanaAppIndicator3-0.1.typelib' | grep -q .; then
-  echo "ERROR: AppIndicator typelib missing from bundle (install gir1.2-girepository-3.0)" >&2
-  exit 1
-fi
+for typelib in AyatanaAppIndicator3-0.1 Gtk-3.0 DBus-1.0 GObject-2.0 GLib-2.0; do
+  if ! find dist/SafeCodeSessionGuard -name "$typelib.typelib" | grep -q .; then
+    echo "ERROR: $typelib.typelib missing from bundle (install gir1.2-girepository-3.0)" >&2
+    exit 1
+  fi
+done
 
 VERSION=$(.venv/bin/python -c 'import sessionguard; print(sessionguard.__version__)')
 NAME="SafeCodeSessionGuard-$VERSION-linux-$(uname -m)"

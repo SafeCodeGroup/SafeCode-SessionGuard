@@ -38,6 +38,41 @@ HIDDEN = {
 )
 
 a = Analysis(["session_guard.py"], hiddenimports=HIDDEN)
+
+
+def linux_typelib_closure(namespaces):
+    """Paths of every typelib the tray needs, transitive dependencies included.
+
+    PyInstaller's GI hooks only bundle typelibs of namespaces that have their
+    own hook, so dependencies like DBus-1.0 are left out and the app fails on
+    systems without the matching gir1.2-* packages.
+    """
+    import gi
+
+    try:
+        gi.require_version("GIRepository", "3.0")
+        from gi.repository import GIRepository
+
+        repo = GIRepository.Repository()
+        lazy = GIRepository.RepositoryLoadFlags.LAZY
+    except ValueError:
+        gi.require_version("GIRepository", "2.0")
+        from gi.repository import GIRepository
+
+        repo = GIRepository.Repository.get_default()
+        lazy = GIRepository.RepositoryLoadFlags.IREPOSITORY_LOAD_FLAG_LAZY
+    for namespace, version in namespaces:
+        repo.require(namespace, version, lazy)
+    return sorted({repo.get_typelib_path(ns) for ns in repo.get_loaded_namespaces()})
+
+
+if sys.platform.startswith("linux"):
+    bundled = {dest for dest, _, _ in a.datas}
+    for path in linux_typelib_closure([("AyatanaAppIndicator3", "0.1"), ("Gtk", "3.0")]):
+        dest = "gi_typelibs/" + Path(path).name
+        if dest not in bundled:
+            print(f"Bundling typelib dependency {dest}")
+            a.datas.append((dest, path, "DATA"))
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
