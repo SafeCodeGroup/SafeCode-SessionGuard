@@ -102,7 +102,7 @@ jobs:
 
       - name: Check binary architecture
         run: |
-          ls -1 dist/*.zip dist/*.dmg dist/*.tar.gz 2>/dev/null
+          ls -1 dist
           case "${{ matrix.id }}" in
             macos-*)   file "${{ matrix.exe }}" ;;
             linux-*)   file "${{ matrix.exe }}" ;;
