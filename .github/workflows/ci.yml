@@ -1,7 +1,8 @@
 name: CI
 
-# One job, run on macOS, Windows and Linux. Every push to main lints, tests,
-# builds and launch-tests the app; a v* tag also publishes the GitHub Release.
+# One job, run natively on every supported OS and CPU. Every push to main lints,
+# tests, builds and launch-tests the app; a v* tag also publishes the GitHub
+# Release with all binaries.
 on:
   push:
     branches: [main]
@@ -19,14 +20,29 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: macOS
+          - name: macOS (Apple Silicon)
+            id: macos-arm64
             os: macos-latest
             exe: "dist/SafeCode SessionGuard.app/Contents/MacOS/SafeCodeSessionGuard"
-          - name: Windows
+          - name: macOS (Intel)
+            id: macos-x86_64
+            os: macos-15-intel
+            exe: "dist/SafeCode SessionGuard.app/Contents/MacOS/SafeCodeSessionGuard"
+          - name: Windows (x64)
+            id: windows-x64
             os: windows-latest
             exe: dist/SafeCodeSessionGuard/SafeCodeSessionGuard.exe
-          - name: Linux
+          - name: Windows (ARM64)
+            id: windows-arm64
+            os: windows-11-arm
+            exe: dist/SafeCodeSessionGuard/SafeCodeSessionGuard.exe
+          - name: Linux (x86_64)
+            id: linux-x86_64
             os: ubuntu-24.04
+            exe: dist/SafeCodeSessionGuard/SafeCodeSessionGuard
+          - name: Linux (ARM64)
+            id: linux-aarch64
+            os: ubuntu-24.04-arm
             exe: dist/SafeCodeSessionGuard/SafeCodeSessionGuard
     defaults:
       run:
@@ -39,6 +55,11 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+
+      - name: Show build machine
+        run: |
+          echo "runner: $RUNNER_OS $RUNNER_ARCH"
+          python -c "import platform, sys; print(platform.platform(), platform.machine(), sys.version)"
 
       - name: Install Linux system packages
         if: runner.os == 'Linux'
@@ -79,6 +100,16 @@ jobs:
         if: runner.os == 'Linux'
         run: scripts/build_linux.sh
 
+      - name: Check binary architecture
+        run: |
+          ls -1 dist/*.zip dist/*.dmg dist/*.tar.gz 2>/dev/null
+          case "${{ matrix.id }}" in
+            macos-*)   file "${{ matrix.exe }}" ;;
+            linux-*)   file "${{ matrix.exe }}" ;;
+            windows-*) $VPY -c "import struct,sys; d=open(sys.argv[1],'rb').read(4096); o=struct.unpack_from('<I',d,0x3c)[0]; m=struct.unpack_from('<H',d,o+4)[0]; print(sys.argv[1], {0x8664:'x64',0xAA64:'arm64'}.get(m,hex(m)))" "${{ matrix.exe }}" ;;
+          esac
+          ls dist | grep -q -- "-${{ matrix.id }}\." || { echo "No release file named for ${{ matrix.id }}"; exit 1; }
+
       - name: Self-test and launch test
         run: |
           headless() { if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a dbus-launch --exit-with-session "$@"; else "$@"; fi; }
@@ -102,8 +133,10 @@ jobs:
             xvfb xauth dbus python3 procps libayatana-appindicator3-1"
           run fedora:latest "dnf install -y xorg-x11-server-Xvfb xorg-x11-xauth dbus-daemon python3 \
             procps-ng libayatana-appindicator-gtk3 tar gzip"
-          run archlinux:latest "pacman -Syu --noconfirm xorg-server-xvfb xorg-xauth dbus python \
-            procps-ng libayatana-appindicator tar gzip"
+          if [ "$(uname -m)" = x86_64 ]; then  # Arch publishes x86_64 images only
+            run archlinux:latest "pacman -Syu --noconfirm xorg-server-xvfb xorg-xauth dbus python \
+              procps-ng libayatana-appindicator tar gzip"
+          fi
 
       - name: "Linux: run from source on Ubuntu 22.04 (system Python)"
         if: runner.os == 'Linux'
@@ -114,7 +147,7 @@ jobs:
               xprintidle xvfb xauth dbus procps >/dev/null && scripts/ci/source_run_test.sh"
 
       - name: "Linux: Docker cross-build"
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && runner.arch == 'X64'
         run: |
           OUT=dist-docker scripts/build_linux_docker.sh amd64
           tar -tzf dist-docker/SafeCodeSessionGuard-*-linux-x86_64.tar.gz \
@@ -129,7 +162,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: SafeCodeSessionGuard-${{ matrix.name }}
+          name: SafeCodeSessionGuard-${{ matrix.id }}
           path: |
             dist/*.zip
             dist/*.dmg

@@ -29,13 +29,21 @@ Download the file for your system from the
 [Releases page](https://github.com/SafeCodeGroup/SafeCode-SessionGuard/releases). Every release
 contains macOS, Windows and Linux builds.
 
-| System | Download |
-|---|---|
-| macOS 11+ on Apple Silicon (M1–M4) | `SafeCodeSessionGuard-<version>-macos-arm64.dmg` (or `.zip`) |
-| Windows 10 / 11 (64-bit) | `SafeCodeSessionGuard-<version>-windows-x64.zip` |
-| Ubuntu 24.04+, Debian 13+, Fedora 40+, other Linux with glibc 2.39+ (x86_64) | `SafeCodeSessionGuard-<version>-linux-x86_64.tar.gz` |
+| System | Hardware | Download |
+|---|---|---|
+| macOS 11+ | Apple Silicon (M1–M4) | `SafeCodeSessionGuard-<version>-macos-arm64.dmg` (or `.zip`) |
+| macOS 11+ | Intel | `SafeCodeSessionGuard-<version>-macos-x86_64.dmg` (or `.zip`) |
+| Windows 10 / 11 | Intel / AMD 64-bit | `SafeCodeSessionGuard-<version>-windows-x64.zip` |
+| Windows 11 | ARM64 (Snapdragon, Surface Pro X) | `SafeCodeSessionGuard-<version>-windows-arm64.zip` |
+| Ubuntu 24.04+, Debian 13+, Fedora 40+, Arch | Intel / AMD 64-bit | `SafeCodeSessionGuard-<version>-linux-x86_64.tar.gz` |
+| Ubuntu 24.04+, Debian 13+, Fedora 40+ | ARM64 (Raspberry Pi 4/5 with 64-bit OS, ARM servers) | `SafeCodeSessionGuard-<version>-linux-aarch64.tar.gz` |
 
-Older Linux (for example Ubuntu 22.04) and Intel Macs: see
+Not sure which one you need?
+- **macOS:** Apple menu → **About This Mac**. "Chip: Apple M…" means Apple Silicon; "Processor: Intel" means Intel.
+- **Windows:** Settings → System → About → **System type** says "x64-based" or "ARM-based".
+- **Linux:** run `uname -m`. `x86_64` → x86_64 download, `aarch64` → aarch64 download.
+
+Older Linux (for example Ubuntu 22.04, which has glibc older than 2.39): see
 [Run from source](#run-from-source-any-os-older-linux-intel-mac).
 
 ### macOS
@@ -64,7 +72,7 @@ Older Linux (for example Ubuntu 22.04) and Intel Macs: see
 sudo apt install gir1.2-ayatanaappindicator3-0.1 xprintidle
 
 # 2. Download and install for your user (no root needed)
-tar -xzf SafeCodeSessionGuard-*-linux-x86_64.tar.gz
+tar -xzf SafeCodeSessionGuard-*-linux-$(uname -m).tar.gz
 ./SafeCodeSessionGuard/install.sh
 
 # 3. Start it from the app menu ("SafeCode SessionGuard") or:
@@ -106,7 +114,7 @@ systemd distro includes.
 
 ### Windows
 
-Unzip `SafeCodeSessionGuard-<version>-windows-x64.zip` anywhere (for example
+Unzip `SafeCodeSessionGuard-<version>-windows-x64.zip` (or `-windows-arm64.zip` on ARM PCs) anywhere (for example
 `C:\Program Files\SafeCodeSessionGuard`) and run `SafeCodeSessionGuard.exe`. The build isn't
 code-signed yet, so on the SmartScreen prompt choose **More info → Run anyway**. The icon appears
 in the system tray; Windows may tuck it under the **^** overflow arrow.
@@ -201,22 +209,29 @@ Release builds use **Python 3.12**.
 PyInstaller **cannot cross-compile**: a macOS build has to be made on macOS, a Windows build on
 Windows and a Linux build on Linux. There are three ways to build:
 
-1. **CI (recommended).** `.github/workflows/ci.yml` has a single `build` job that runs on
-   macOS, Windows and Linux. Each run lints, tests, builds and launch-tests the app. The Linux
-   run also:
-   - installs and launches the Linux download on Ubuntu 24.04, Debian 13, Fedora and Arch;
-   - runs from source on Ubuntu 22.04;
-   - does the Docker cross-build.
+1. **CI (recommended).** `.github/workflows/ci.yml` has a single `build` job that runs natively
+   on six targets:
 
-   Binaries are attached to every run as artifacts. On a `vX.Y.Z` tag the same job publishes
-   them to one GitHub Release.
+   | OS | CPU |
+   |---|---|
+   | macOS | Apple Silicon, Intel |
+   | Windows | x64, ARM64 |
+   | Linux | x86_64, ARM64 |
+
+   Each target lints, tests, builds, checks the binary's CPU architecture, then runs `--self-test`
+   and a launch test. The Linux targets also:
+   - install and launch the download on Ubuntu 24.04, Debian 13 and Fedora (plus Arch on x86_64);
+   - run from source on Ubuntu 22.04.
+
+   Binaries are attached to every run as artifacts. On a `vX.Y.Z` tag the same job publishes all
+   eight files to one GitHub Release.
 2. **Locally,** on each OS:
 
 | OS | Command | Output in `dist/` |
 |---|---|---|
-| macOS | `scripts/build_macos.sh` | `SafeCode SessionGuard.app`, `…-macos-arm64.zip`, `…-macos-arm64.dmg` |
-| Windows (PowerShell 7) | `scripts\build_windows.ps1` | `SafeCodeSessionGuard\SafeCodeSessionGuard.exe`, `…-windows-x64.zip` |
-| Linux | `scripts/build_linux.sh` | `SafeCodeSessionGuard/SafeCodeSessionGuard`, `…-linux-x86_64.tar.gz` |
+| macOS | `scripts/build_macos.sh` | `SafeCode SessionGuard.app`, `…-macos-<arm64\|x86_64>.zip` and `.dmg` |
+| Windows (PowerShell 7) | `scripts\build_windows.ps1` | `SafeCodeSessionGuard\SafeCodeSessionGuard.exe`, `…-windows-<x64\|arm64>.zip` |
+| Linux | `scripts/build_linux.sh` | `SafeCodeSessionGuard/SafeCodeSessionGuard`, `…-linux-<x86_64\|aarch64>.tar.gz` |
 
 3. **Linux from any OS with Docker.** This works from macOS, Windows/WSL or Linux:
    `scripts/build_linux_docker.sh amd64` (or `arm64`). It builds inside Ubuntu 24.04 and writes
@@ -233,8 +248,9 @@ sudo apt-get install libgirepository-2.0-dev libcairo2-dev pkg-config \
     gir1.2-ayatanaappindicator3-0.1 gir1.2-girepository-3.0
 ```
 
-The architecture follows the machine you build on. The macOS app is `arm64` on Apple Silicon;
-build on an Intel Mac for `x86_64`.
+The binary's CPU architecture is always the one of the machine you build on. CI builds each of
+the six targets natively: macOS arm64 and x86_64, Windows x64 and ARM64, Linux x86_64 and
+aarch64.
 
 To check a build:
 - `<executable> --self-test report.txt` loads every runtime dependency (tray backend, input
@@ -259,8 +275,8 @@ python3.12 -m venv .venv
 1. Bump `__version__` in `sessionguard/__init__.py` and add an entry to `CHANGELOG.md`.
 2. Commit, then `git tag vX.Y.Z && git push origin main vX.Y.Z`.
 3. CI builds and tests all three platforms. Each platform uploads its files to a draft release,
-   and the release is published automatically once all four files are attached
-   (macOS `.dmg` + `.zip`, Windows `.zip`, Linux `.tar.gz`).
+   and the release is published automatically once all eight files are attached
+   (macOS arm64/x86_64 `.dmg` + `.zip`, Windows x64/arm64 `.zip`, Linux x86_64/aarch64 `.tar.gz`).
 
 ### Project layout
 

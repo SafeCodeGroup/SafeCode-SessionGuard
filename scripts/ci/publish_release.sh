@@ -5,7 +5,9 @@
 # sees the full set).
 set -euo pipefail
 TAG="$GITHUB_REF_NAME"
-EXPECTED=4  # macOS .dmg + .zip, Windows .zip, Linux .tar.gz
+# macOS arm64 + x86_64 (.dmg + .zip each), Windows x64 + arm64 (.zip),
+# Linux x86_64 + aarch64 (.tar.gz)
+EXPECTED=8
 shopt -s nullglob
 files=(dist/*.dmg dist/*.zip dist/*.tar.gz)
 [ ${#files[@]} -gt 0 ] || { echo "No release files in dist/" >&2; exit 1; }

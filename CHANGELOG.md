@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.1
+
+- Native binaries for every supported OS and CPU:
+  - macOS Apple Silicon and Intel
+  - Windows x64 and ARM64
+  - Linux x86_64 and aarch64
+- Linux: bundle every GObject typelib the tray needs, so it also runs on Debian, Fedora and Arch
+  without extra `gir1.2-*` packages.
+- Fatal startup errors are logged and the app exits instead of hanging.
+- Clear error when no desktop D-Bus session is available on Linux.
+- `--self-test` mode to check a build; CI runs it on every target.
+- Windows: the sleep block is reliably released, the mouse nudge counts as user activity, and the
+  menu refreshes safely.
+
 ## 1.1.0
 
 - Renamed to **SafeCode SessionGuard** (bundle ID `com.safecodeg.sessionguard`).

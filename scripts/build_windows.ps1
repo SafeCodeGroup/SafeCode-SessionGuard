@@ -13,6 +13,8 @@ Invoke-Checked .venv\Scripts\python.exe -m pip install -q -r requirements-dev.tx
 Invoke-Checked .venv\Scripts\pyinstaller.exe --noconfirm --clean SafeCodeSessionGuard.spec
 
 $version = (& .venv\Scripts\python.exe -c "import sessionguard; print(sessionguard.__version__)").Trim()
-$zip = "dist\SafeCodeSessionGuard-$version-windows-x64.zip"
+# Name the zip after the CPU the build ran on (PyInstaller builds natively).
+$arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "x64" }
+$zip = "dist\SafeCodeSessionGuard-$version-windows-$arch.zip"
 Compress-Archive -Path dist\SafeCodeSessionGuard -DestinationPath $zip -Force
 Write-Host "Built: dist\SafeCodeSessionGuard\SafeCodeSessionGuard.exe, $zip"
