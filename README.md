@@ -25,26 +25,125 @@ on **macOS, Windows and Linux**.
 
 ## Install
 
-Download the file for your OS from the
-[Releases page](https://github.com/SafeCodeGroup/SafeCode-SessionGuard/releases).
+Download the file for your system from the
+[Releases page](https://github.com/SafeCodeGroup/SafeCode-SessionGuard/releases). Every release
+contains macOS, Windows and Linux builds.
 
-| OS | File | Install |
-|---|---|---|
-| macOS 11+ (Apple Silicon) | `SafeCodeSessionGuard-<ver>-macos-arm64.dmg` | Open and drag **SafeCode SessionGuard** to Applications |
-| Windows 10/11 (x64) | `SafeCodeSessionGuard-<ver>-windows-x64.zip` | Unzip anywhere and run `SafeCodeSessionGuard.exe` |
-| Linux x86_64 (X11) | `SafeCodeSessionGuard-<ver>-linux-x86_64.tar.gz` | `tar xzf …` and run `SafeCodeSessionGuard/SafeCodeSessionGuard` |
+| System | Download |
+|---|---|
+| macOS 11+ on Apple Silicon (M1–M4) | `SafeCodeSessionGuard-<version>-macos-arm64.dmg` (or `.zip`) |
+| Windows 10 / 11 (64-bit) | `SafeCodeSessionGuard-<version>-windows-x64.zip` |
+| Ubuntu 24.04+, Debian 13+, Fedora 40+, other Linux with glibc 2.39+ (x86_64) | `SafeCodeSessionGuard-<version>-linux-x86_64.tar.gz` |
 
-**First run**
+Older Linux (for example Ubuntu 22.04) and Intel Macs: see
+[Run from source](#run-from-source-any-os-older-linux-intel-mac).
 
-- **macOS:** builds are not notarized yet. Right-click the app → **Open** the first time, or run
-  `xattr -dr com.apple.quarantine "/Applications/SafeCode SessionGuard.app"`. To use the mouse or
-  key nudge, allow the app in **System Settings → Privacy & Security → Accessibility**. The menu
-  shows a ⚠ shortcut until you do. Sleep prevention works without this permission.
-- **Windows:** builds are not code-signed yet. In the SmartScreen warning, choose
-  **More info → Run anyway**.
-- **Linux:** needs an AppIndicator-capable tray (GNOME with the AppIndicator extension, KDE, XFCE,
-  …) and `libayatana-appindicator3`. Idle detection uses `xprintidle` if it's installed. On
-  Wayland, the "only when idle" check falls back to a plain timer.
+### macOS
+
+1. Open the `.dmg` and drag **SafeCode SessionGuard** onto **Applications**.
+   If you downloaded the `.zip`, unzip it and move the app into **Applications**.
+2. **First launch.** The app isn't notarized yet, so macOS blocks a plain double-click.
+   - In Finder, open **Applications**, right-click **SafeCode SessionGuard** → **Open** →
+     **Open**, or
+   - run this in Terminal:
+     ```bash
+     xattr -dr com.apple.quarantine "/Applications/SafeCode SessionGuard.app"
+     open "/Applications/SafeCode SessionGuard.app"
+     ```
+3. A green shield appears in the **menu bar** at the top of the screen. There is no Dock icon.
+4. **Allow input** so the mouse/key nudge works: go to **System Settings → Privacy & Security →
+   Accessibility** and turn on **SafeCode SessionGuard**. Until you do, the menu shows
+   "⚠ Allow input in Accessibility settings…" as a shortcut. Sleep prevention works without this.
+5. Optional: choose **Launch at login** from the menu. This only works once the app is in
+   **Applications**, not while it's running from the DMG.
+
+### Ubuntu / Debian
+
+```bash
+# 1. Tray support. Ubuntu's desktop already includes it; this is a no-op there.
+sudo apt install gir1.2-ayatanaappindicator3-0.1 xprintidle
+
+# 2. Download and install for your user (no root needed)
+tar -xzf SafeCodeSessionGuard-*-linux-x86_64.tar.gz
+./SafeCodeSessionGuard/install.sh
+
+# 3. Start it from the app menu ("SafeCode SessionGuard") or:
+safecode-sessionguard &
+```
+
+`install.sh` installs:
+
+| What | Where |
+|---|---|
+| App | `~/.local/opt/SafeCodeSessionGuard/` |
+| Command | `~/.local/bin/safecode-sessionguard` |
+| Menu entry | `~/.local/share/applications/safecode-sessionguard.desktop` |
+| Icon | `~/.local/share/icons/hicolor/256x256/apps/` |
+
+To upgrade, extract the new download and run its `install.sh` again.
+
+**Tray icon not showing?**
+- **Ubuntu (GNOME):** the "Ubuntu AppIndicators" extension is enabled by default.
+- **Plain GNOME (Fedora, Debian GNOME):** install and enable the
+  [AppIndicator and KStatusNotifierItem Support](https://extensions.gnome.org/extension/615/appindicator-support/)
+  extension, e.g. `sudo apt install gnome-shell-extension-appindicator` on Debian, then log out
+  and back in.
+- **KDE Plasma, XFCE, Cinnamon, MATE, Budgie:** tray support is built in.
+
+### Fedora / Arch / other Linux
+
+Same download and `install.sh` as above. Only the package names for tray support and idle
+detection differ:
+
+```bash
+sudo dnf install libayatana-appindicator-gtk3 xprintidle          # Fedora
+sudo pacman -S libayatana-appindicator xprintidle                  # Arch / Manjaro
+```
+
+`xprintidle` is optional. It powers **Only when idle** on X11. On Wayland, and when it's missing,
+the app falls back to a fixed timer. Sleep prevention uses `systemd-inhibit`, which every
+systemd distro includes.
+
+### Windows
+
+Unzip `SafeCodeSessionGuard-<version>-windows-x64.zip` anywhere (for example
+`C:\Program Files\SafeCodeSessionGuard`) and run `SafeCodeSessionGuard.exe`. The build isn't
+code-signed yet, so on the SmartScreen prompt choose **More info → Run anyway**. The icon appears
+in the system tray; Windows may tuck it under the **^** overflow arrow.
+
+### Run from source (any OS, older Linux, Intel Mac)
+
+Requires Python 3.10 or newer. CI tests this route on Ubuntu 22.04 with its system Python 3.10.
+
+```bash
+git clone https://github.com/SafeCodeGroup/SafeCode-SessionGuard.git
+cd SafeCode-SessionGuard
+```
+
+- **macOS (Intel or Apple Silicon) and Windows**
+  ```bash
+  python3 -m venv .venv
+  .venv/bin/pip install -r requirements.txt     # Windows: .venv\Scripts\pip ...
+  .venv/bin/python session_guard.py              # Windows: .venv\Scripts\pythonw session_guard.py
+  ```
+- **Linux.** This uses your distro's PyGObject. A compiler is needed only for the small `evdev`
+  module that `pynput` depends on:
+  ```bash
+  sudo apt install python3-venv python3-dev build-essential python3-gi \
+       gir1.2-ayatanaappindicator3-0.1 xprintidle                     # Ubuntu/Debian
+  # Fedora: sudo dnf install python3-devel gcc python3-gobject libayatana-appindicator-gtk3 xprintidle
+  python3 -m venv --system-site-packages .venv
+  .venv/bin/pip install pystray==0.19.5 pynput==1.8.2 Pillow
+  .venv/bin/python session_guard.py &
+  ```
+
+### Uninstall
+
+| OS | Steps |
+|---|---|
+| macOS | Quit from the menu, delete `/Applications/SafeCode SessionGuard.app`, then `rm -f ~/Library/LaunchAgents/com.safecodeg.sessionguard.plist`. Optionally remove `~/Library/Application Support/SafeCodeSessionGuard` and `~/Library/Logs/SafeCodeSessionGuard`. |
+| Linux | `~/.local/opt/SafeCodeSessionGuard/install.sh --uninstall`. Optionally remove `~/.config/SafeCodeSessionGuard`. |
+| Windows | Turn off **Launch at login**, quit, delete the folder. Optionally remove `%APPDATA%\SafeCodeSessionGuard`. |
 
 ## Using it
 
@@ -95,16 +194,22 @@ The real file is plain JSON without comments. If a value is missing or invalid, 
 
 ## Building from source
 
-Requires **Python 3.12**.
+Release builds use **Python 3.12**.
 
 ### Cross-platform builds
 
 PyInstaller **cannot cross-compile**: a macOS build has to be made on macOS, a Windows build on
 Windows and a Linux build on Linux. There are three ways to build:
 
-1. **CI (recommended).** Every push to `main` runs lint, tests, a build and a launch smoke test on
-   all three OSes in GitHub Actions, plus the Docker Linux build. The binaries are attached to
-   the run as artifacts. Pushing a tag `vX.Y.Z` also publishes a GitHub Release with all of them.
+1. **CI (recommended).** `.github/workflows/ci.yml` has a single `build` job that runs on
+   macOS, Windows and Linux. Each run lints, tests, builds and launch-tests the app. The Linux
+   run also:
+   - installs and launches the Linux download on Ubuntu 24.04, Debian 13, Fedora and Arch;
+   - runs from source on Ubuntu 22.04;
+   - does the Docker cross-build.
+
+   Binaries are attached to every run as artifacts. On a `vX.Y.Z` tag the same job publishes
+   them to one GitHub Release.
 2. **Locally,** on each OS:
 
 | OS | Command | Output in `dist/` |
@@ -147,7 +252,9 @@ python3.12 -m venv .venv
 
 1. Bump `__version__` in `sessionguard/__init__.py` and add an entry to `CHANGELOG.md`.
 2. Commit, then `git tag vX.Y.Z && git push origin main vX.Y.Z`.
-3. CI builds all three platforms and publishes the GitHub Release.
+3. CI builds and tests all three platforms. Each platform uploads its files to a draft release,
+   and the release is published automatically once all four files are attached
+   (macOS `.dmg` + `.zip`, Windows `.zip`, Linux `.tar.gz`).
 
 ### Project layout
 
@@ -161,6 +268,7 @@ sessionguard/
   schedule.py     active-hours window
   settings.py     JSON settings with validation
   autostart.py    launch at login
+  compat.py       shims for third-party library changes
   instance.py     single-instance lock
   logs.py         rotating log file and crash capture
   permissions.py  macOS Accessibility check
@@ -168,6 +276,7 @@ sessionguard/
 assets/           app icons (generated by scripts/make_icons.py)
 scripts/          build (native + Docker), DMG, icon and smoke-test scripts
 docker/           Linux build image
+packaging/linux/  install.sh shipped inside the Linux download
 tests/            pytest suite
 ```
 

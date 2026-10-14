@@ -6,3 +6,4 @@ build/
 dist/
 *.app/
 .DS_Store
+dist-docker/

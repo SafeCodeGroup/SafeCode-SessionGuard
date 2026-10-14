@@ -10,4 +10,12 @@ trap 'rm -rf "$STAGE"' EXIT
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 rm -f "$OUT"
-hdiutil create -volname "SafeCode SessionGuard" -srcfolder "$STAGE" -format UDZO -ov "$OUT"
+# hdiutil sometimes fails with "Resource busy" on CI machines; retry.
+for attempt in 1 2 3; do
+  if hdiutil create -volname "SafeCode SessionGuard" -srcfolder "$STAGE" -format UDZO -ov "$OUT"; then
+    exit 0
+  fi
+  echo "hdiutil attempt $attempt failed" >&2
+  sleep 5
+done
+exit 1

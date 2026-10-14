@@ -12,5 +12,7 @@ cd "$(dirname "$0")/.."
 
 VERSION=$(.venv/bin/python -c 'import sessionguard; print(sessionguard.__version__)')
 NAME="SafeCodeSessionGuard-$VERSION-linux-$(uname -m)"
+cp packaging/linux/install.sh dist/SafeCodeSessionGuard/install.sh
+cp assets/icon-256.png dist/SafeCodeSessionGuard/safecode-sessionguard.png
 tar -czf "dist/$NAME.tar.gz" -C dist SafeCodeSessionGuard
 echo "Built: dist/SafeCodeSessionGuard/, dist/$NAME.tar.gz"

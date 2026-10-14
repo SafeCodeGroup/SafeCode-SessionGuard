@@ -4,16 +4,34 @@ import logging
 import os
 import platform
 import subprocess
+import threading
 
 from . import APP_NAME
 
 log = logging.getLogger(__name__)
-
 SYSTEM = platform.system()
+
+ES_CONTINUOUS = 0x80000000
+ES_SYSTEM_REQUIRED = 0x00000001
+ES_DISPLAY_REQUIRED = 0x00000002
+
+
+def _set_execution_state(flags: int) -> bool:
+    try:
+        import ctypes
+
+        fn = ctypes.windll.kernel32.SetThreadExecutionState
+        fn.argtypes = [ctypes.c_uint32]
+        fn.restype = ctypes.c_uint32
+        return fn(flags) != 0
+    except Exception:
+        return False
 
 
 class SleepInhibitor:
     """Prevents system sleep using OS-native mechanisms."""
+
+    SPAWN_CHECK = 0.3  # seconds a helper must survive to count as started
 
     def __init__(self, system: str = SYSTEM):
         self.system = system
@@ -45,11 +63,18 @@ class SleepInhibitor:
 
     def _spawn(self, cmd) -> bool:
         try:
-            self._proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return True
-        except FileNotFoundError:
-            self._proc = None
+            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
             return False
+        # A helper that exits straight away (e.g. polkit denied systemd-inhibit,
+        # or no logind in a container) is not holding anything.
+        try:
+            code = proc.wait(timeout=self.SPAWN_CHECK)
+        except subprocess.TimeoutExpired:
+            self._proc = proc
+            return True
+        log.info("%s exited immediately with code %s", cmd[0], code)
+        return False
 
     def _start_mac(self) -> bool:
         # -d display, -i idle, -m disk, -s system (on AC power).
@@ -57,19 +82,25 @@ class SleepInhibitor:
         return self._spawn(["caffeinate", "-dims", "-w", str(os.getpid())])
 
     def _start_windows(self) -> bool:
-        ES_CONTINUOUS = 0x80000000
-        ES_SYSTEM_REQUIRED = 0x00000001
-        ES_DISPLAY_REQUIRED = 0x00000002
-        try:
-            import ctypes
+        # The execution state belongs to the thread that sets it, so one
+        # dedicated thread sets it, holds it, and clears it again.
+        ready, release, result = threading.Event(), threading.Event(), []
 
-            flags = ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED
-            if not ctypes.windll.kernel32.SetThreadExecutionState(flags):
-                return False
-            self._es = flags
-            return True
-        except Exception:
+        def hold():
+            ok = _set_execution_state(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED)
+            result.append(ok)
+            ready.set()
+            if ok:
+                release.wait()
+                _set_execution_state(ES_CONTINUOUS)
+
+        thread = threading.Thread(target=hold, name="execution-state", daemon=True)
+        thread.start()
+        ready.wait(5)
+        if not (result and result[0]):
             return False
+        self._es = (thread, release)
+        return True
 
     def _start_linux(self) -> bool:
         # The inhibitor holds its lock while this child runs; the child exits
@@ -100,11 +131,7 @@ class SleepInhibitor:
             proc.wait()
 
     def _stop_windows(self) -> None:
-        ES_CONTINUOUS = 0x80000000
-        try:
-            import ctypes
-
-            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS)
-        except Exception:
-            pass
+        thread, release = self._es
         self._es = None
+        release.set()
+        thread.join(timeout=2)

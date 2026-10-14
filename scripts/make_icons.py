@@ -30,6 +30,7 @@ def main() -> None:
     ASSETS.mkdir(exist_ok=True)
     icon = draw_icon()
     icon.save(ASSETS / "icon.png")
+    icon.resize((256, 256), Image.LANCZOS).save(ASSETS / "icon-256.png")
     icon.save(ASSETS / "icon.icns")
     sizes = [(n, n) for n in (16, 24, 32, 48, 64, 128, 256)]
     icon.save(ASSETS / "icon.ico", sizes=sizes)

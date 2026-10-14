@@ -9,6 +9,7 @@ import webbrowser
 
 from . import APP_ID, APP_NAME, HOMEPAGE, __version__
 from .autostart import Autostart
+from .compat import ensure_gobject_idle_add
 from .guard import Guard
 from .icon import create_icon_image
 from .inhibitor import SleepInhibitor
@@ -39,19 +40,15 @@ def duration_label(minutes: int) -> str:
     return f"{minutes} minutes"
 
 
-def call_on_main(fn) -> None:
-    """Run fn on the UI thread. macOS aborts on AppKit calls from other threads."""
-    if SYSTEM == "Darwin":
-        from PyObjCTools import AppHelper
-
-        AppHelper.callAfter(fn)
-    else:
-        fn()
+WM_APP_REFRESH = 0x8000 + 1  # WM_APP + 1
 
 
 def open_path(path) -> None:
     if SYSTEM == "Windows":
-        os.startfile(path)
+        try:
+            os.startfile(path)
+        except OSError:  # no app associated with .json
+            subprocess.Popen(["notepad.exe", str(path)])
     elif SYSTEM == "Darwin":
         subprocess.Popen(["open", "-t", str(path)])
     else:
@@ -157,9 +154,17 @@ class SessionGuardApp:
     def _toggle_autostart(self, icon=None, item=None):
         if self.autostart.is_enabled():
             self.autostart.disable()
-        else:
-            self.autostart.enable()
+        elif not self.autostart.enable():
+            self._notify(f"Move {APP_NAME} to the Applications folder to launch it at login.")
         self._refresh()
+
+    def _notify(self, message: str) -> None:
+        log.info("%s", message)
+        if self.icon is not None and getattr(self.icon, "HAS_NOTIFICATION", False):
+            try:
+                self.icon.notify(message, APP_NAME)
+            except Exception:
+                log.warning("Notification failed", exc_info=True)
 
     def _edit_settings(self, icon=None, item=None):
         self._save()
@@ -191,12 +196,41 @@ class SessionGuardApp:
 
     # Lifecycle ----------------------------------------------------------
 
+    def _refresh_from_worker(self):
+        """Refresh from a background thread, on the UI thread where required."""
+        if SYSTEM == "Darwin":
+            # AppKit aborts the process on UI calls from other threads.
+            from PyObjCTools import AppHelper
+
+            AppHelper.callAfter(self._refresh)
+        elif SYSTEM == "Windows" and self._post_refresh():
+            pass
+        else:
+            # pystray's GTK backends already queue updates onto their own loop.
+            self._refresh()
+
+    def _post_refresh(self) -> bool:
+        """Ask pystray's Win32 message thread to refresh (pystray 0.19 internals)."""
+        hwnd = getattr(self.icon, "_hwnd", None)
+        handlers = getattr(self.icon, "_message_handlers", None)
+        if not hwnd or handlers is None:
+            return False
+        import ctypes
+        from ctypes import wintypes
+
+        handlers[WM_APP_REFRESH] = lambda wparam, lparam: self._refresh()
+        post = ctypes.windll.user32.PostMessageW
+        post.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        post.restype = wintypes.BOOL
+        return bool(post(hwnd, WM_APP_REFRESH, 0, 0))
+
     def _tick_loop(self):
         while not self._stopping.wait(self.TICK):
             if self.guard.evaluate():
-                call_on_main(self._refresh)
+                self._refresh_from_worker()
 
     def run(self):
+        ensure_gobject_idle_add()
         import pystray
 
         # Start before the tray loop: on macOS, tray updates from a

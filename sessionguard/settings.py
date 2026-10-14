@@ -88,7 +88,8 @@ _CHECKS = {
 
 def load(path: Path) -> Settings:
     try:
-        return Settings.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+        # utf-8-sig: Notepad's "UTF-8 with BOM" must not reset the settings.
+        return Settings.from_dict(json.loads(Path(path).read_text(encoding="utf-8-sig")))
     except (OSError, ValueError):
         return Settings()
 
