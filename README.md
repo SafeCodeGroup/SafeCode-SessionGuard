@@ -25,26 +25,32 @@ on **macOS, Windows and Linux**.
 
 ## Install
 
-Download the file for your system from the
+Download the file for your computer from the
 [Releases page](https://github.com/SafeCodeGroup/SafeCode-SessionGuard/releases). Every release
-contains macOS, Windows and Linux builds.
+has a native build for each of these:
 
-| System | Hardware | Download |
-|---|---|---|
-| macOS 11+ | Apple Silicon (M1–M4) | `SafeCodeSessionGuard-<version>-macos-arm64.dmg` (or `.zip`) |
-| macOS 11+ | Intel | `SafeCodeSessionGuard-<version>-macos-x86_64.dmg` (or `.zip`) |
-| Windows 10 / 11 | Intel / AMD 64-bit | `SafeCodeSessionGuard-<version>-windows-x64.zip` |
-| Windows 11 | ARM64 (Snapdragon, Surface Pro X) | `SafeCodeSessionGuard-<version>-windows-arm64.zip` |
-| Ubuntu 24.04+, Debian 13+, Fedora 40+, Arch | Intel / AMD 64-bit | `SafeCodeSessionGuard-<version>-linux-x86_64.tar.gz` |
-| Ubuntu 24.04+, Debian 13+, Fedora 40+ | ARM64 (Raspberry Pi 4/5 with 64-bit OS, ARM servers) | `SafeCodeSessionGuard-<version>-linux-aarch64.tar.gz` |
+| Your computer | Download |
+|---|---|
+| **Mac, Apple Silicon** (M1, M2, M3, M4, M5) | `SafeCodeSessionGuard-<version>-macos-apple-silicon.dmg` |
+| **Mac, Intel** | `SafeCodeSessionGuard-<version>-macos-intel.dmg` |
+| **Windows 10/11, 64-bit** (Intel / AMD) | `SafeCodeSessionGuard-<version>-windows-x64.zip` |
+| **Windows 10, 32-bit** | `SafeCodeSessionGuard-<version>-windows-x86.zip` |
+| **Windows 11 on ARM** (Snapdragon, Surface Pro X) | `SafeCodeSessionGuard-<version>-windows-arm64.zip` |
+| **Ubuntu 22.04+, Debian 12+, Linux Mint 21+, Pop!_OS** (64-bit PC) | `safecode-sessionguard_<version>_amd64.deb` |
+| **Ubuntu / Debian on ARM64**, Raspberry Pi OS 64-bit | `safecode-sessionguard_<version>_arm64.deb` |
+| **Raspberry Pi OS 32-bit** (Bookworm or newer) | `safecode-sessionguard_<version>_armhf.deb` |
+| **Debian 12+ 32-bit PC** (i386) | `safecode-sessionguard_<version>_i386.deb` |
+| **Fedora, RHEL / Rocky / Alma 9+, openSUSE** (64-bit PC) | `safecode-sessionguard-<version>-1.x86_64.rpm` |
+| **Fedora / RHEL on ARM64** | `safecode-sessionguard-<version>-1.aarch64.rpm` |
+| **Any other Linux** (Arch, Manjaro, …) | `SafeCodeSessionGuard-<version>-linux-<x86_64\|aarch64\|armv7l\|i686>.tar.gz` |
 
-Not sure which one you need?
-- **macOS:** Apple menu → **About This Mac**. "Chip: Apple M…" means Apple Silicon; "Processor: Intel" means Intel.
-- **Windows:** Settings → System → About → **System type** says "x64-based" or "ARM-based".
-- **Linux:** run `uname -m`. `x86_64` → x86_64 download, `aarch64` → aarch64 download.
+macOS downloads also come as a `.zip` with the same app.
 
-Older Linux (for example Ubuntu 22.04, which has glibc older than 2.39): see
-[Run from source](#run-from-source-any-os-older-linux-intel-mac).
+**Which one do I need?**
+- **Mac:** Apple menu → **About This Mac**. "Chip: Apple M…" means Apple Silicon.
+- **Windows:** Settings → System → About → **System type**.
+- **Linux:** run `uname -m` (`x86_64`, `aarch64`, `armv7l` or `i686`) or
+  `dpkg --print-architecture` (`amd64`, `arm64`, `armhf` or `i386`).
 
 ### macOS
 
@@ -65,61 +71,70 @@ Older Linux (for example Ubuntu 22.04, which has glibc older than 2.39): see
 5. Optional: choose **Launch at login** from the menu. This only works once the app is in
    **Applications**, not while it's running from the DMG.
 
-### Ubuntu / Debian
+### Ubuntu, Debian, Linux Mint, Raspberry Pi OS (.deb)
 
 ```bash
-# 1. Tray support. Ubuntu's desktop already includes it; this is a no-op there.
-sudo apt install gir1.2-ayatanaappindicator3-0.1 xprintidle
+sudo apt install ./safecode-sessionguard_*_amd64.deb      # use your architecture's file
+safecode-sessionguard &                                    # or open it from the app menu
+```
 
-# 2. Download and install for your user (no root needed)
-tar -xzf SafeCodeSessionGuard-*-linux-$(uname -m).tar.gz
-./SafeCodeSessionGuard/install.sh
+`apt` installs the one dependency (`libayatana-appindicator3-1`) automatically. You can also
+double-click the `.deb` and install it with the **App Center** / **Software** app.
 
-# 3. Start it from the app menu ("SafeCode SessionGuard") or:
+- Remove: `sudo apt remove safecode-sessionguard`
+- Upgrade: install the newer `.deb` the same way.
+
+### Fedora, RHEL / Rocky / Alma, openSUSE (.rpm)
+
+```bash
+sudo dnf install ./safecode-sessionguard-*-1.x86_64.rpm   # Fedora / RHEL family
+sudo zypper install ./safecode-sessionguard-*-1.x86_64.rpm # openSUSE
 safecode-sessionguard &
 ```
 
-`install.sh` installs:
+On RHEL / Rocky / Alma, enable EPEL first (`sudo dnf install epel-release`); it provides
+`libayatana-appindicator-gtk3`.
 
-| What | Where |
-|---|---|
-| App | `~/.local/opt/SafeCodeSessionGuard/` |
-| Command | `~/.local/bin/safecode-sessionguard` |
-| Menu entry | `~/.local/share/applications/safecode-sessionguard.desktop` |
-| Icon | `~/.local/share/icons/hicolor/256x256/apps/` |
+- Remove: `sudo dnf remove safecode-sessionguard`
 
-To upgrade, extract the new download and run its `install.sh` again.
-
-**Tray icon not showing?**
-- **Ubuntu (GNOME):** the "Ubuntu AppIndicators" extension is enabled by default.
-- **Plain GNOME (Fedora, Debian GNOME):** install and enable the
-  [AppIndicator and KStatusNotifierItem Support](https://extensions.gnome.org/extension/615/appindicator-support/)
-  extension, e.g. `sudo apt install gnome-shell-extension-appindicator` on Debian, then log out
-  and back in.
-- **KDE Plasma, XFCE, Cinnamon, MATE, Budgie:** tray support is built in.
-
-### Fedora / Arch / other Linux
-
-Same download and `install.sh` as above. Only the package names for tray support and idle
-detection differ:
+### Any other Linux (tarball, no root needed)
 
 ```bash
-sudo dnf install libayatana-appindicator-gtk3 xprintidle          # Fedora
-sudo pacman -S libayatana-appindicator xprintidle                  # Arch / Manjaro
+tar -xzf SafeCodeSessionGuard-*-linux-$(uname -m).tar.gz
+./SafeCodeSessionGuard/install.sh                # installs to ~/.local for your user
+safecode-sessionguard &
 ```
 
-`xprintidle` is optional. It powers **Only when idle** on X11. On Wayland, and when it's missing,
-the app falls back to a fixed timer. Sleep prevention uses `systemd-inhibit`, which every
-systemd distro includes.
+Install tray support from your distro first (Arch: `sudo pacman -S libayatana-appindicator`).
+`install.sh` adds the app to `~/.local/opt/SafeCodeSessionGuard`, a `safecode-sessionguard`
+command, a menu entry and an icon. `./install.sh --uninstall` removes them.
+
+### Linux notes
+
+- **Tray icon not showing?**
+  - **Ubuntu (GNOME):** the "Ubuntu AppIndicators" extension is enabled by default.
+  - **Plain GNOME (Fedora, Debian GNOME):** install and enable the
+    [AppIndicator and KStatusNotifierItem Support](https://extensions.gnome.org/extension/615/appindicator-support/)
+    extension, e.g. `sudo apt install gnome-shell-extension-appindicator` on Debian, then log out
+    and back in.
+  - **KDE Plasma, XFCE, Cinnamon, MATE, Budgie, LXQt, Raspberry Pi desktop:** tray support is
+    built in.
+- **Only when idle** uses `xprintidle` on X11 (`sudo apt install xprintidle`). On Wayland, and
+  when it's missing, it falls back to a fixed timer.
+- **Minimum versions:**
+  - 64-bit builds need glibc 2.35 or newer (Ubuntu 22.04+, Debian 12+, Fedora 36+, RHEL 10).
+  - 32-bit builds need glibc 2.36 or newer (Debian 12 / Raspberry Pi OS Bookworm).
+  - On anything older, use [Run from source](#run-from-source-any-os-older-linux).
 
 ### Windows
 
-Unzip `SafeCodeSessionGuard-<version>-windows-x64.zip` (or `-windows-arm64.zip` on ARM PCs) anywhere (for example
+Unzip `SafeCodeSessionGuard-<version>-windows-x64.zip` (`-windows-x86.zip` on 32-bit Windows,
+`-windows-arm64.zip` on ARM PCs) anywhere (for example
 `C:\Program Files\SafeCodeSessionGuard`) and run `SafeCodeSessionGuard.exe`. The build isn't
 code-signed yet, so on the SmartScreen prompt choose **More info → Run anyway**. The icon appears
 in the system tray; Windows may tuck it under the **^** overflow arrow.
 
-### Run from source (any OS, older Linux, Intel Mac)
+### Run from source (any OS, older Linux)
 
 Requires Python 3.10 or newer. CI tests this route on Ubuntu 22.04 with its system Python 3.10.
 
@@ -150,7 +165,7 @@ cd SafeCode-SessionGuard
 | OS | Steps |
 |---|---|
 | macOS | Quit from the menu, delete `/Applications/SafeCode SessionGuard.app`, then `rm -f ~/Library/LaunchAgents/com.safecodeg.sessionguard.plist`. Optionally remove `~/Library/Application Support/SafeCodeSessionGuard` and `~/Library/Logs/SafeCodeSessionGuard`. |
-| Linux | `~/.local/opt/SafeCodeSessionGuard/install.sh --uninstall`. Optionally remove `~/.config/SafeCodeSessionGuard`. |
+| Linux | `.deb`: `sudo apt remove safecode-sessionguard` · `.rpm`: `sudo dnf remove safecode-sessionguard` · tarball: `~/.local/opt/SafeCodeSessionGuard/install.sh --uninstall`. Optionally remove `~/.config/SafeCodeSessionGuard`. |
 | Windows | Turn off **Launch at login**, quit, delete the folder. Optionally remove `%APPDATA%\SafeCodeSessionGuard`. |
 
 ## Using it
@@ -209,29 +224,34 @@ Release builds use **Python 3.12**.
 PyInstaller **cannot cross-compile**: a macOS build has to be made on macOS, a Windows build on
 Windows and a Linux build on Linux. There are three ways to build:
 
-1. **CI (recommended).** `.github/workflows/ci.yml` has a single `build` job that runs natively
-   on six targets:
+1. **CI (recommended).** `.github/workflows/ci.yml` has a single `build` job that runs for nine
+   targets:
 
-   | OS | CPU |
+   | OS | Targets |
    |---|---|
    | macOS | Apple Silicon, Intel |
-   | Windows | x64, ARM64 |
-   | Linux | x86_64, ARM64 |
+   | Windows | x64, x86 32-bit, ARM64 |
+   | Linux | x86_64, ARM64, ARMv7 32-bit, x86 32-bit |
 
-   Each target lints, tests, builds, checks the binary's CPU architecture, then runs `--self-test`
-   and a launch test. The Linux targets also:
-   - install and launch the download on Ubuntu 24.04, Debian 13 and Fedora (plus Arch on x86_64);
-   - run from source on Ubuntu 22.04.
+   The 64-bit Linux builds run on Ubuntu 22.04 for glibc 2.35 compatibility. The 32-bit Linux
+   builds run inside Debian 12 containers (QEMU for ARMv7). Each target builds natively, checks
+   the binary's CPU architecture, then runs `--self-test` and a launch test.
 
-   Binaries are attached to every run as artifacts. On a `vX.Y.Z` tag the same job publishes all
-   eight files to one GitHub Release.
+   Linux targets also produce `.deb` packages (plus `.rpm` for 64-bit) and test them:
+   - tarball and `.deb` install, launch and uninstall on Ubuntu 22.04/24.04 and Debian 12/13;
+   - tarball and `.rpm` on Fedora;
+   - tarball on Arch;
+   - running from source on Ubuntu 22.04.
+
+   On a `vX.Y.Z` tag the same job publishes all 17 files to one GitHub Release.
 2. **Locally,** on each OS:
 
 | OS | Command | Output in `dist/` |
 |---|---|---|
-| macOS | `scripts/build_macos.sh` | `SafeCode SessionGuard.app`, `…-macos-<arm64\|x86_64>.zip` and `.dmg` |
-| Windows (PowerShell 7) | `scripts\build_windows.ps1` | `SafeCodeSessionGuard\SafeCodeSessionGuard.exe`, `…-windows-<x64\|arm64>.zip` |
-| Linux | `scripts/build_linux.sh` | `SafeCodeSessionGuard/SafeCodeSessionGuard`, `…-linux-<x86_64\|aarch64>.tar.gz` |
+| macOS | `scripts/build_macos.sh` | `SafeCode SessionGuard.app`, `…-macos-<apple-silicon\|intel>.zip` and `.dmg` |
+| Windows (PowerShell 7) | `scripts\build_windows.ps1` | `SafeCodeSessionGuard\SafeCodeSessionGuard.exe`, `…-windows-<x64\|x86\|arm64>.zip` (follows the Python you build with) |
+| Linux | `scripts/build_linux.sh` | `SafeCodeSessionGuard/`, `…-linux-<arch>.tar.gz`, `.deb`, and `.rpm` if `rpmbuild` is installed |
+| Linux 32-bit (via Docker) | `scripts/ci/build_linux_debian.sh linux/arm/v7 armv7l` or `linux/386 i686` | `…-linux-armv7l.tar.gz` + `armhf.deb`, or `…-linux-i686.tar.gz` + `i386.deb` |
 
 3. **Linux from any OS with Docker.** This works from macOS, Windows/WSL or Linux:
    `scripts/build_linux_docker.sh amd64` (or `arm64`). It builds inside Ubuntu 24.04 and writes
@@ -244,13 +264,12 @@ on macOS or Linux.
 Native Linux builds need these system packages first (Debian/Ubuntu):
 
 ```bash
-sudo apt-get install libgirepository-2.0-dev libcairo2-dev pkg-config \
-    gir1.2-ayatanaappindicator3-0.1 gir1.2-girepository-3.0
+sudo apt-get install libgirepository1.0-dev libcairo2-dev pkg-config \
+    gir1.2-ayatanaappindicator3-0.1 gir1.2-girepository-2.0 rpm   # rpm: optional, for .rpm
 ```
 
-The binary's CPU architecture is always the one of the machine you build on. CI builds each of
-the six targets natively: macOS arm64 and x86_64, Windows x64 and ARM64, Linux x86_64 and
-aarch64.
+The binary's CPU architecture is always the one of the machine (or container, or Python) you
+build on.
 
 To check a build:
 - `<executable> --self-test report.txt` loads every runtime dependency (tray backend, input
@@ -275,8 +294,10 @@ python3.12 -m venv .venv
 1. Bump `__version__` in `sessionguard/__init__.py` and add an entry to `CHANGELOG.md`.
 2. Commit, then `git tag vX.Y.Z && git push origin main vX.Y.Z`.
 3. CI builds and tests all three platforms. Each platform uploads its files to a draft release,
-   and the release is published automatically once all eight files are attached
-   (macOS arm64/x86_64 `.dmg` + `.zip`, Windows x64/arm64 `.zip`, Linux x86_64/aarch64 `.tar.gz`).
+   and the release is published automatically once all 17 files are attached:
+   - macOS: 4
+   - Windows: 3
+   - Linux: 4 tarballs, 4 `.deb`, 2 `.rpm`
 
 ### Project layout
 
@@ -296,9 +317,9 @@ sessionguard/
   permissions.py  macOS Accessibility check
   icon.py         tray icon artwork
 assets/           app icons (generated by scripts/make_icons.py)
-scripts/          build (native + Docker), DMG, icon and smoke-test scripts
+scripts/          build (native + Docker), DMG, .deb/.rpm, icon and smoke-test scripts
 docker/           Linux build image
-packaging/linux/  install.sh shipped inside the Linux download
+packaging/        Linux install.sh (tarball) and the GitHub release notes template
 tests/            pytest suite
 ```
 

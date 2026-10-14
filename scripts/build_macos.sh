@@ -9,7 +9,9 @@ cd "$(dirname "$0")/.."
 
 VERSION=$(.venv/bin/python -c 'import sessionguard; print(sessionguard.__version__)')
 APP="dist/SafeCode SessionGuard.app"
-NAME="SafeCodeSessionGuard-$VERSION-macos-$(uname -m)"
+# Apple Silicon covers every M-series Mac (M1-M5); builds are native per CPU.
+case "$(uname -m)" in arm64) HW=apple-silicon ;; *) HW=intel ;; esac
+NAME="SafeCodeSessionGuard-$VERSION-macos-$HW"
 rm -f "dist/$NAME.zip"
 ditto -c -k --keepParent "$APP" "dist/$NAME.zip"
 echo "Built: $APP, dist/$NAME.zip"

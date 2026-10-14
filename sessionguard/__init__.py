@@ -1,6 +1,6 @@
 """SafeCode SessionGuard - cross-platform session keep-alive."""
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
 APP_NAME = "SafeCode SessionGuard"
 APP_ID = "SafeCodeSessionGuard"  # file-, folder- and registry-safe name

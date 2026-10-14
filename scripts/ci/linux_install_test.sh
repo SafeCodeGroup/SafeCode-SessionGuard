@@ -2,7 +2,7 @@
 # Runs inside a distro container: install the Linux download, launch it, uninstall.
 set -euxo pipefail
 T=$(mktemp -d)
-tar -xzf dist/SafeCodeSessionGuard-*-linux-"$(uname -m)".tar.gz -C "$T"
+tar -xzf dist/SafeCodeSessionGuard-*-linux-"${ARCH:-$(uname -m)}".tar.gz -C "$T"
 "$T/SafeCodeSessionGuard/install.sh"
 if ! dbus-run-session -- xvfb-run -a \
     "$HOME/.local/bin/safecode-sessionguard" --self-test "$T/selftest.txt"; then

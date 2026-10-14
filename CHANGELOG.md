@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0
+
+- New downloads:
+  - Windows 32-bit (x86)
+  - Raspberry Pi OS 32-bit (armv7l / armhf)
+  - Linux 32-bit PC (i686 / i386)
+- Native Linux packages: `.deb` for Ubuntu / Debian / Mint / Raspberry Pi OS (amd64, arm64,
+  armhf, i386) and `.rpm` for Fedora / RHEL / openSUSE (x86_64, aarch64).
+- 64-bit Linux builds now need only glibc 2.35, so they also run on Ubuntu 22.04 and Debian 12.
+- macOS downloads are named for the hardware: `macos-apple-silicon` (M1–M5) and `macos-intel`.
+- Release notes include a "which download do I need" table.
+
 ## 1.1.1
 
 - Native binaries for every supported OS and CPU:

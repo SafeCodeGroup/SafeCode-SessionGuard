@@ -13,8 +13,10 @@ Invoke-Checked .venv\Scripts\python.exe -m pip install -q -r requirements-dev.tx
 Invoke-Checked .venv\Scripts\pyinstaller.exe --noconfirm --clean SafeCodeSessionGuard.spec
 
 $version = (& .venv\Scripts\python.exe -c "import sessionguard; print(sessionguard.__version__)").Trim()
-# Name the zip after the CPU the build ran on (PyInstaller builds natively).
-$arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "x64" }
+# PyInstaller builds for the CPU of the Python it runs on (x64, 32-bit x86 or ARM64).
+$plat = (& .venv\Scripts\python.exe -c "import sysconfig; print(sysconfig.get_platform())").Trim()
+$arch = @{ "win-amd64" = "x64"; "win32" = "x86"; "win-arm64" = "arm64" }[$plat]
+if (-not $arch) { throw "Unknown Python platform $plat" }
 $zip = "dist\SafeCodeSessionGuard-$version-windows-$arch.zip"
 Compress-Archive -Path dist\SafeCodeSessionGuard -DestinationPath $zip -Force
 Write-Host "Built: dist\SafeCodeSessionGuard\SafeCodeSessionGuard.exe, $zip"

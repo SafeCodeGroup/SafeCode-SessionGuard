@@ -2,4 +2,4 @@ pystray==0.19.5
 pynput==1.8.2
 Pillow==12.3.0
 # Linux tray menus need the AppIndicator backend (see README for system packages).
-PyGObject==3.58.1; sys_platform == "linux"
+PyGObject==3.50.2; sys_platform == "linux"
