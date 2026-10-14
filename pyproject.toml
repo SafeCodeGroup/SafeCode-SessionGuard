@@ -1,0 +1,19 @@
+[project]
+name = "safecode-sessionguard"
+dynamic = ["version"]
+description = "SafeCode SessionGuard - cross-platform session keep-alive tray app"
+requires-python = ">=3.12"
+
+[project.urls]
+Homepage = "https://www.safecodeg.com/"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E731"]  # small lambdas in menu wiring read better inline
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

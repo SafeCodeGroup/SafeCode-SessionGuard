@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-latest
+            exe: "dist/SafeCode SessionGuard.app/Contents/MacOS/SafeCodeSessionGuard"
+          - name: Windows
+            os: windows-latest
+            exe: dist/SafeCodeSessionGuard/SafeCodeSessionGuard.exe
+          - name: Linux
+            os: ubuntu-24.04
+            exe: dist/SafeCodeSessionGuard/SafeCodeSessionGuard
+    defaults:
+      run:
+        shell: bash
+    env:
+      PYTHON: python
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Linux system packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgirepository-2.0-dev libcairo2-dev pkg-config \
+            gir1.2-ayatanaappindicator3-0.1 xvfb xprintidle dbus-x11
+
+      - name: Create virtualenv
+        run: |
+          python -m venv .venv
+          if [ "$RUNNER_OS" = Windows ]; then VPY=.venv/Scripts/python.exe; else VPY=.venv/bin/python; fi
+          echo "VPY=$VPY" >> "$GITHUB_ENV"
+          $VPY -m pip install --upgrade pip
+          $VPY -m pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: |
+          $VPY -m ruff check .
+          $VPY -m ruff format --check .
+
+      - name: Test
+        run: $VPY -m pytest -q
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: scripts/build_macos.sh
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: scripts/build_windows.ps1
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: scripts/build_linux.sh
+
+      - name: Smoke test
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a dbus-launch --exit-with-session $VPY scripts/smoke_test.py "${{ matrix.exe }}"
+          else
+            $VPY scripts/smoke_test.py "${{ matrix.exe }}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SafeCodeSessionGuard-${{ matrix.name }}
+          path: |
+            dist/*.zip
+            dist/*.dmg
+            dist/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "SafeCode SessionGuard ${GITHUB_REF_NAME#v}" \
+            --generate-notes
