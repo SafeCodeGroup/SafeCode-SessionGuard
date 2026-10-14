@@ -68,7 +68,10 @@ def linux_typelib_closure(namespaces):
 
 if sys.platform.startswith("linux"):
     bundled = {dest for dest, _, _ in a.datas}
-    for path in linux_typelib_closure([("AyatanaAppIndicator3", "0.1"), ("Gtk", "3.0")]):
+    # Everything pystray's Linux backend requires: the tray (AppIndicator, Gtk)
+    # and desktop notifications (pystray/_util/notify_dbus.py: DBus, Gio).
+    tray_namespaces = [("AyatanaAppIndicator3", "0.1"), ("Gtk", "3.0"), ("DBus", "1.0"), ("Gio", "2.0")]
+    for path in linux_typelib_closure(tray_namespaces):
         dest = "gi_typelibs/" + Path(path).name
         if dest not in bundled:
             print(f"Bundling typelib dependency {dest}")
